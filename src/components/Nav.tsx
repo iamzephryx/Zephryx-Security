@@ -131,7 +131,7 @@ export default function Nav() {
                 <NavLink
                   item={item}
                   active={active}
-                  className={`group relative flex items-baseline gap-1.5 px-3 py-2 font-mono text-[13px] transition-colors duration-300 ${
+                  className={`group relative flex items-baseline gap-1.5 px-2 py-2 font-mono text-[13px] xl:px-3 transition-colors duration-300 ${
                     active ? 'text-ink' : 'text-ink-faint hover:text-ink-dim'
                   }`}
                 >
@@ -156,7 +156,7 @@ export default function Nav() {
           })}
           <Link
             href="/contact/"
-            className="clip-tab ml-2.5 flex items-baseline gap-1.5 border border-red-deep/70 bg-red-ash/25 px-3.5 py-2 font-mono text-[13px] text-red-blood transition-all duration-300 hover:bg-red-blood hover:text-void hover:shadow-[0_0_24px_-4px_rgba(255,45,75,0.7)]"
+            className="clip-tab ml-2 flex items-baseline gap-1.5 whitespace-nowrap border border-red-deep/70 bg-red-ash/25 px-3.5 py-2 font-mono text-[13px] text-red-blood transition-all duration-300 hover:bg-red-blood hover:text-void hover:shadow-[0_0_24px_-4px_rgba(255,45,75,0.7)]"
           >
             {MODE.cta}
           </Link>
