@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import EngagementNotice from '@/components/EngagementNotice';
 import Reveal from '@/components/Reveal';
 import { SERVICES, priceLabel, startingPrice } from '@/lib/site';
 import { buildMetadata } from '@/lib/metadata';
@@ -15,7 +14,6 @@ export const metadata: Metadata = buildMetadata({
 export default function Services() {
   return (
     <div className="mx-auto max-w-6xl px-5 pt-32 pb-16 sm:px-8">
-      <EngagementNotice className="mb-8" />
       <Reveal>
         <p className="font-mono text-[11px] tracking-[0.3em] text-red-blood/70">SERVICES</p>
         <h1 className="mt-3 font-mono text-4xl font-bold tracking-tight text-ink sm:text-5xl">

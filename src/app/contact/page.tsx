@@ -30,20 +30,6 @@ function Aside({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function Contact() {
-  if (!ACCEPTING_ENGAGEMENTS) {
-    return (
-      <div className="mx-auto max-w-3xl px-5 pt-32 pb-16 sm:px-8">
-        <p className="font-mono text-[11px] tracking-[0.3em] text-red-blood/70">CONTACT</p>
-        <h1 className="mt-3 font-mono text-4xl font-bold tracking-tight text-ink sm:text-5xl">
-          {NOT_ACCEPTING_MESSAGE}
-        </h1>
-        <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
-          The services and process pages stay up for reference.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto grid max-w-6xl gap-14 px-5 pt-32 pb-16 sm:px-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16">
       <div>

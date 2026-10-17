@@ -128,8 +128,6 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/quote' || url.pathname === '/api/quote/') {
-      // Paused: answer before parsing, rate limiting, KV or mail — nothing is read, stored or sent.
-      if (!ACCEPTING_ENGAGEMENTS) return json({ ok: false, error: NOT_ACCEPTING_MESSAGE }, 503);
       if (request.method !== 'POST') return json({ ok: false, error: 'Method not allowed.' }, 405);
       if (!ENGAGEMENT.accepting) {
         return json({ ok: false, error: 'New engagements are paused. Please join the waitlist.' }, 503);

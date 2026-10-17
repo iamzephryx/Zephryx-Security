@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import EngagementNotice from '@/components/EngagementNotice';
 import Reveal from '@/components/Reveal';
 import Cta from '@/components/Cta';
 import { getService, plansFor, priceFigure, SERVICES } from '@/lib/site';
@@ -36,7 +35,6 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="mx-auto max-w-4xl px-5 pt-32 pb-16 sm:px-8">
-      <EngagementNotice className="mb-8" />
       <Reveal>
         <Link
           href="/services/"
@@ -130,7 +128,6 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
         </section>
       </Reveal>
 
-      {ACCEPTING_ENGAGEMENTS && (
       <Reveal>
         <section className="panel clip-corner mt-14 p-7">
           <h2 className="font-mono text-lg font-semibold text-ink">Scope {service.short}</h2>
@@ -141,7 +138,6 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
           <Cta className="mt-6" />
         </section>
       </Reveal>
-      )}
 
       <p className="mt-10 font-mono text-[12px] text-ink-faint">
         <Link href="/services/" className="text-red-blood/80 hover:text-red-blood">
