@@ -77,8 +77,8 @@ export default function Home() {
 
           <Reveal delay={80}>
             <h1 className="mt-7 font-mono text-3xl font-bold leading-[1.15] tracking-tight text-ink sm:text-5xl">
-              Penetration testing with a fixed scope, a fixed price, and fixes your developers can
-              ship<span className="text-red-blood">.</span>
+              Penetration testing with a fixed scope and a fixed price
+              <span className="text-red-blood">.</span>
             </h1>
           </Reveal>
 
