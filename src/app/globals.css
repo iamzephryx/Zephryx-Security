@@ -124,6 +124,29 @@
     background-size: 56px 56px;
   }
 
+  /* FAQ: native <details>, a mono +/- marker instead of the browser triangle. */
+  details.faq > summary {
+    display: flex;
+    min-height: 44px;
+    cursor: pointer;
+    list-style: none;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  details.faq > summary::-webkit-details-marker {
+    display: none;
+  }
+  details.faq > summary::after {
+    content: '+';
+    flex: none;
+    font-family: var(--font-mono);
+    color: var(--color-red-blood);
+  }
+  details.faq[open] > summary::after {
+    content: '\2212';
+  }
+
   .reveal {
     opacity: 0;
     transform: translateY(18px);

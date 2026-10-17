@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
-import { NAV, SITE } from '@/lib/site';
-import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
+import { MODE, NAV, SITE } from '@/lib/site';
 import ZephryxMark from '@/components/ZephryxMark';
 
 /** Renders `Link` for an internal route, or a new-tab anchor for `external` — see NAV in site.ts. */
@@ -54,6 +53,9 @@ function ExternalGlyph({ className = '' }: { className?: string }) {
     </span>
   );
 }
+
+/** Contact (and any other `header: false` entry) is covered by the CTA button. */
+const HEADER_NAV = NAV.filter((item) => item.header);
 
 export default function Nav() {
   const pathname = usePathname();
@@ -117,12 +119,12 @@ export default function Nav() {
         </Link>
 
         <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary">
-          {NAV.map((item, i) => {
+          {HEADER_NAV.map((item, i) => {
             const active = !item.external && isActive(item.href);
             // zephryx.in leaves this origin entirely — a divider marks where
             // the row stops being this site's pages and starts being a jump
             // to a sibling one, matching the pattern on the sibling sites.
-            const startsExternalCluster = item.external && !NAV[i - 1]?.external;
+            const startsExternalCluster = item.external && !HEADER_NAV[i - 1]?.external;
             return (
               <span key={item.href} className="flex items-center">
                 {startsExternalCluster ? <span className="mx-1.5 h-4 w-px bg-line" aria-hidden /> : null}
@@ -152,14 +154,12 @@ export default function Nav() {
               </span>
             );
           })}
-          {ACCEPTING_ENGAGEMENTS && (
-            <Link
-              href="/contact/"
-              className="clip-tab ml-2.5 flex items-baseline gap-1.5 border border-red-deep/70 bg-red-ash/25 px-3.5 py-2 font-mono text-[13px] text-red-blood transition-all duration-300 hover:bg-red-blood hover:text-void hover:shadow-[0_0_24px_-4px_rgba(255,45,75,0.7)]"
-            >
-              Request assessment
-            </Link>
-          )}
+          <Link
+            href="/contact/"
+            className="clip-tab ml-2.5 flex items-baseline gap-1.5 border border-red-deep/70 bg-red-ash/25 px-3.5 py-2 font-mono text-[13px] text-red-blood transition-all duration-300 hover:bg-red-blood hover:text-void hover:shadow-[0_0_24px_-4px_rgba(255,45,75,0.7)]"
+          >
+            {MODE.cta}
+          </Link>
         </nav>
 
         <button
@@ -178,13 +178,13 @@ export default function Nav() {
       <div
         id="mobile-nav"
         className={`overflow-hidden border-t border-line/60 bg-void/95 backdrop-blur-xl transition-[max-height,opacity] duration-400 lg:hidden ${
-          open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          open ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <nav className="flex flex-col px-5 py-3" aria-label="Mobile" aria-hidden={!open}>
-          {NAV.map((item, i) => {
+          {HEADER_NAV.map((item, i) => {
             const active = !item.external && isActive(item.href);
-            const startsExternalCluster = item.external && !NAV[i - 1]?.external;
+            const startsExternalCluster = item.external && !HEADER_NAV[i - 1]?.external;
             return (
               <span key={item.href}>
                 {startsExternalCluster ? (
@@ -213,11 +213,9 @@ export default function Nav() {
               </span>
             );
           })}
-          {ACCEPTING_ENGAGEMENTS && (
-            <Link href="/contact/" className="py-3.5 font-mono text-sm text-red-blood" tabIndex={open ? undefined : -1}>
-              Request assessment →
-            </Link>
-          )}
+          <Link href="/contact/" className="py-3.5 font-mono text-sm text-red-blood" tabIndex={open ? undefined : -1}>
+            {MODE.cta} →
+          </Link>
         </nav>
       </div>
       </header>
