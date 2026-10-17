@@ -345,7 +345,9 @@ export type Service = {
   tagline: string;
   /** One line under the title in lists. */
   scopeLine: string;
+  /** The row text in lists, also used as the page's meta description. */
   summary: string;
+  /** Extra detail shown under the summary on the service's own page. */
   description: string;
   idealFor: string[];
   inScope: string[];
@@ -361,9 +363,9 @@ export const SERVICES: Service[] = [
     tagline: 'Manual testing of the application, and the APIs behind it, that your customers actually use.',
     scopeLine: 'Scopes sized by screens, endpoints, and user roles',
     summary:
-      'Manual testing of login, access control, business logic, and input handling in your web application and its APIs.',
+      'Manual testing of login, access control, business logic, and input handling in your web application and its APIs. Automated scanners often miss flaws in business logic, so this part is done by hand.',
     description:
-      'Manual testing of login, access control, business logic, and input handling in your web application and its APIs. Automated scanners often miss flaws in business logic, so this part is done by hand. Broken object-level authorization — one user’s ID swapped for another’s in a request that still returns 200 — is a common API finding, and it is invisible if you only click through the UI, so the API is tested directly: every endpoint, every role, every object reference.',
+      'Broken object-level authorization — one user’s ID swapped for another’s in a request that still returns 200 — is a common API finding, and it is invisible if you only click through the UI, so the API is tested directly: every endpoint, every role, every object reference.',
     idealFor: [
       'SaaS products ahead of a launch, funding round, or enterprise deal',
       'Apps and APIs handling auth, payments, or customer data',
@@ -393,9 +395,9 @@ export const SERVICES: Service[] = [
     tagline: 'What an outsider can find and use, tested the way an intruder would.',
     scopeLine: 'Up to 25 public hosts',
     summary:
-      'What an outsider can find and use: exposed services, forgotten hosts, weak configurations, and known vulnerabilities that are actually reachable.',
+      'What an outsider can find and use: exposed services, forgotten hosts, weak configurations, and known vulnerabilities that are actually reachable. Exploitation happens only if you allow it.',
     description:
-      'What an outsider can find and use: exposed services, forgotten hosts, weak configurations, and known vulnerabilities that are actually reachable. Exploitation happens only if you allow it. A scanner reports what is listening; this engagement works out which of it matters.',
+      'A scanner reports what is listening; this engagement works out which of it matters.',
     idealFor: [
       'Companies with their own internet-facing servers, VPN endpoints, or on-prem infrastructure',
       'Anyone who has never had their public attack surface checked from the outside',
@@ -422,9 +424,9 @@ export const SERVICES: Service[] = [
     tagline: 'The attack paths that turn one stolen account into domain admin.',
     scopeLine: 'One domain, up to 50 hosts',
     summary:
-      'An assumed-breach test of your Windows domain, starting from an ordinary user account, showing how far a single stolen account could go.',
+      'An assumed-breach test of your Windows domain, starting from an ordinary user account. I check Kerberos abuse, risky permissions, delegation, and certificate services, and show how far a single stolen account could go.',
     description:
-      'An assumed-breach test of your Windows domain, starting from an ordinary user account. I check Kerberos abuse, risky permissions, delegation, and certificate services, and show how far a single stolen account could go. A misconfigured ACL three hops from a help-desk account or unconstrained delegation left on from a migration years ago will not show up in a vulnerability scan, and it is how domains actually fall. Access runs through a VPN or a jump host that you provide.',
+      'A misconfigured ACL three hops from a help-desk account or unconstrained delegation left on from a migration years ago will not show up in a vulnerability scan, and it is how domains actually fall. Access runs through a VPN or a jump host that you provide.',
     idealFor: [
       'Any business running Windows AD for identity — most mid-size companies do',
       'Post-acquisition environments where two domains were merged in a hurry',
@@ -453,9 +455,9 @@ export const SERVICES: Service[] = [
     tagline: 'Which attacker techniques your logs and alerts catch, and Sigma rules for the ones they miss.',
     scopeLine: 'Scoped to your logging setup',
     summary:
-      'Attacker techniques run in your environment, checked against what your logs and alerts catch, with a coverage map against MITRE ATT&CK and Sigma rules for the gaps.',
+      'I run attacker techniques in your environment and check which ones your logs and alerts catch. You receive a coverage map against MITRE ATT&CK and Sigma rules for the gaps.',
     description:
-      'I run attacker techniques in your environment and check which ones your logs and alerts catch. You receive a coverage map against MITRE ATT&CK and Sigma rules for the gaps. This is the same detection-engineering work published openly on zephryx.in, applied to your environment instead of a lab.',
+      'This is the same detection-engineering work published openly on zephryx.in, applied to your environment instead of a lab.',
     idealFor: [
       'Teams with a SOC or SIEM who want detections, not just findings',
       'Companies that have already run a standard pentest and want the other half',
