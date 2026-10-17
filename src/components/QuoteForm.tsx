@@ -169,7 +169,8 @@ function ScopingForm() {
           autoComplete="organization"
         />
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        {/* Full width: the size labels are too long for a half-width select. */}
+        <div className="grid gap-5">
           <SelectField
             id="req-service"
             label="What do you want tested?"
