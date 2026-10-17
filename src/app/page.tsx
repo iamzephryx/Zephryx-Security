@@ -65,7 +65,7 @@ export default function Home() {
       <section className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pt-28 pb-16 sm:px-8 lg:min-h-[88vh] lg:grid-cols-[1.15fr_1fr] lg:gap-14">
         <div>
           <Reveal>
-            <p className="flex items-center gap-2.5 font-mono text-[11px] tracking-[0.3em] text-ink-dim">
+            <p className="flex items-center gap-2.5 font-mono text-[11px] tracking-[0.2em] text-ink-dim">
               <span
                 className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
                   ENGAGEMENT.accepting ? 'animate-pulse bg-signal' : 'bg-warn'
