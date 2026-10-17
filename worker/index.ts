@@ -39,6 +39,7 @@
  */
 
 import {
+  EMAIL_RE,
   ENGAGEMENT,
   FORM_LIMITS,
   MAILBOX,
@@ -91,7 +92,6 @@ const LIMITS = {
   rlMax: 5,
 } as const;
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /** Loose id shape check; the allow-list (SERVICE_CHOICES) is applied after it. */
 const SERVICE_ID_RE = /^[a-z0-9-]{1,60}$/;
 const REMOVED_SLUG_RE = /^\/services\/([a-z0-9-]+)\/?$/;
@@ -151,9 +151,12 @@ export default {
     }
 
     // Service pages that were merged or removed in the redesign.
+    // hasOwn, not a bare lookup: `/services/constructor/` must not resolve to
+    // Object.prototype.constructor and become a redirect.
     const removed = REMOVED_SLUG_RE.exec(url.pathname);
-    const target = removed ? REMOVED_SERVICE_REDIRECTS[removed[1]] : undefined;
-    if (target) return Response.redirect(new URL(target, url).toString(), 301);
+    if (removed && Object.hasOwn(REMOVED_SERVICE_REDIRECTS, removed[1])) {
+      return Response.redirect(new URL(REMOVED_SERVICE_REDIRECTS[removed[1]], url).toString(), 301);
+    }
 
     return env.ASSETS.fetch(request);
   },
@@ -254,17 +257,18 @@ async function handleQuote(request: Request, env: Env): Promise<Response> {
     return json({ ok: false, error: 'Please agree to be contacted about this request.' }, 422);
   }
 
+  // --- rate limit (optional, KV-backed) ----------------------------------
+  // Before the DNS check, so throttled requests never cost an outbound lookup.
+  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  if (await overRateLimit(env, 'rl:', ip)) {
+    return json({ ok: false, error: 'Too many requests. Try again later.' }, 429);
+  }
+
   if (!(await domainAcceptsMail(email))) {
     return json(
       { ok: false, error: "That email domain doesn't appear to accept mail — check for a typo." },
       422,
     );
-  }
-
-  // --- rate limit (optional, KV-backed) ----------------------------------
-  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-  if (await overRateLimit(env, 'rl:', ip)) {
-    return json({ ok: false, error: 'Too many requests. Try again later.' }, 429);
   }
 
   // --- persist ------------------------------------------------------------
@@ -321,6 +325,9 @@ async function handleQuote(request: Request, env: Env): Promise<Response> {
   const html = renderEmail(fields);
   const text = `New scoping request\n\nName: ${fields.name}\nEmail: ${fields.email}\nCompany and website: ${fields.company}\nTesting: ${fields.service}\nSize: ${fields.size}\nEnvironment: ${fields.environment}\nResults needed: ${fields.timeline}\nAuthorised to approve testing: yes\nIP: ${fields.ip}\n\nNotes:\n${fields.notes}`;
 
+  // Collapse newlines and cap the length: `company` is user text going into a header-like field.
+  const subjectLabel = (company || name).replace(/\s+/g, ' ').trim().slice(0, 80);
+
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -332,7 +339,7 @@ async function handleQuote(request: Request, env: Env): Promise<Response> {
         from: env.LEAD_FROM,
         to: [env.LEAD_TO],
         reply_to: email,
-        subject: `[security] scoping request — ${company || name}`,
+        subject: `[security] scoping request — ${subjectLabel}`,
         html,
         text,
       }),
@@ -380,17 +387,17 @@ async function handleWaitlist(request: Request, env: Env): Promise<Response> {
     return json({ ok: false, error: `The waitlist is unavailable. Email ${MAILBOX.address} instead.` }, 503);
   }
 
+  // --- rate limit (optional, KV-backed) ----------------------------------
+  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  if (await overRateLimit(env, 'rl:wl:', ip)) {
+    return json({ ok: false, error: 'Too many requests. Try again later.' }, 429);
+  }
+
   if (!(await domainAcceptsMail(email))) {
     return json(
       { ok: false, error: "That email domain doesn't appear to accept mail — check for a typo." },
       422,
     );
-  }
-
-  // --- rate limit (optional, KV-backed) ----------------------------------
-  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-  if (await overRateLimit(env, 'rl:wl:', ip)) {
-    return json({ ok: false, error: 'Too many requests. Try again later.' }, 429);
   }
 
   // --- persist ------------------------------------------------------------

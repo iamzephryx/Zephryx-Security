@@ -61,6 +61,9 @@ export const FORM_LIMITS = {
   notes: 4000,
 } as const;
 
+/** Email shape check, shared by the form and the Worker for the same reason. */
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 /** Everything that changes with `ENGAGEMENT.accepting`, in one place. */
 export const MODE = ENGAGEMENT.accepting
   ? {
@@ -523,6 +526,18 @@ export const SERVICE_CHOICES: Option[] = [
   ...SERVICES.map((s) => ({ id: s.id, label: s.formLabel })),
   NOT_SURE_SERVICE,
 ];
+
+/**
+ * What each select starts on. Always the "not sure" answer, so a visitor who
+ * skips a field is recorded as undecided rather than as having picked the
+ * first real option.
+ */
+export const REQUEST_DEFAULTS = {
+  service: NOT_SURE_SERVICE.id,
+  size: 'unknown',
+  environment: 'unsure',
+  timeline: 'none',
+} as const satisfies Record<string, string>;
 
 /* ------------------------------------------------------------------ process */
 
