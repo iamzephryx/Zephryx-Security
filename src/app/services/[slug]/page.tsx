@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import EngagementNotice from '@/components/EngagementNotice';
 import Reveal from '@/components/Reveal';
+import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
 import { getService, SERVICES } from '@/lib/site';
 import { buildMetadata } from '@/lib/metadata';
 
@@ -34,6 +36,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="mx-auto max-w-4xl px-5 pt-32 pb-16 sm:px-8">
+      <EngagementNotice className="mb-8" />
       <Reveal>
         <Link
           href="/services/"
@@ -105,6 +108,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
         </section>
       </Reveal>
 
+      {ACCEPTING_ENGAGEMENTS && (
       <Reveal>
         <section className="panel clip-corner mt-14 p-7">
           <h2 className="font-mono text-lg font-semibold text-ink">Scope this engagement</h2>
@@ -120,6 +124,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
           </Link>
         </section>
       </Reveal>
+      )}
 
       <p className="mt-10 font-mono text-[12px] text-ink-faint">
         <Link href="/services/" className="text-red-blood/80 hover:text-red-blood">

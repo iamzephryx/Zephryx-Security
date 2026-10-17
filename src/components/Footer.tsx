@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
 import { MAILBOX, NAV, NETWORK, SITE } from '@/lib/site';
 import ZephryxMark from '@/components/ZephryxMark';
 
@@ -96,8 +97,14 @@ export default function Footer() {
         <div className="mt-10 flex flex-col gap-3 border-t border-line/60 pt-6 font-mono text-[11px] text-ink-faint sm:flex-row sm:items-center sm:justify-between">
           <p>© {year} {SITE.parentName}. All rights reserved.</p>
           <p className="flex items-center gap-2">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-signal" />
-            available for new engagements
+            {ACCEPTING_ENGAGEMENTS ? (
+              <>
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-signal" />
+                available for new engagements
+              </>
+            ) : (
+              'not accepting new engagements right now'
+            )}
           </p>
         </div>
       </div>

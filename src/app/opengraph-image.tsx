@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
 import { SITE } from '@/lib/site';
 import { MARK_FRAME, MARK_Z, MARK_COLORS } from '@/components/ZephryxMark';
 
@@ -52,8 +53,10 @@ export default function OgImage() {
             marginBottom: 30,
           }}
         >
-          <div style={{ width: 9, height: 9, borderRadius: 999, background: '#29d391', display: 'flex' }} />
-          AVAILABLE FOR NEW ENGAGEMENTS
+          {ACCEPTING_ENGAGEMENTS && (
+            <div style={{ width: 9, height: 9, borderRadius: 999, background: '#29d391', display: 'flex' }} />
+          )}
+          {ACCEPTING_ENGAGEMENTS ? 'AVAILABLE FOR NEW ENGAGEMENTS' : 'OFFENSIVE SECURITY'}
         </div>
 
         <div
