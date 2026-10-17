@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
-import { SITE } from '@/lib/site';
+import { GITHUB_URL, SERVICES, SITE } from '@/lib/site';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
 import Backdrop from '@/components/Backdrop';
@@ -17,19 +17,10 @@ const orgLd = {
   name: SITE.name,
   url: SITE.url,
   description: SITE.description,
-  areaServed: 'Worldwide',
+  areaServed: 'India',
   parentOrganization: { '@type': 'Organization', name: SITE.parentName, url: SITE.parentUrl },
-  sameAs: [SITE.parentUrl, 'https://github.com/iamzephryx'],
-  serviceType: [
-    'Web Application Penetration Testing',
-    'Network Penetration Testing',
-    'Active Directory Security Assessment',
-    'Cloud Security Assessment',
-    'API Security Testing',
-    'Social Engineering & Phishing Simulation',
-    'Purple Team Assessment',
-    'Compliance-Ready Penetration Testing',
-  ],
+  sameAs: [SITE.parentUrl, GITHUB_URL],
+  serviceType: SERVICES.map((s) => s.title),
 };
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -46,11 +37,10 @@ export const metadata: Metadata = {
   keywords: [
     'penetration testing for startups',
     'web application penetration testing',
-    'cloud security assessment',
-    'active directory security assessment',
     'API security testing',
-    'SOC 2 penetration testing',
-    'ISO 27001 penetration testing',
+    'external network penetration testing',
+    'active directory security assessment',
+    'detection review',
     'boutique penetration testing firm',
     'Zephryx Security',
   ],

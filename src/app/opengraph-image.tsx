@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
-import { SITE } from '@/lib/site';
+import { ENGAGEMENT, MODE, SITE } from '@/lib/site';
 import { MARK_FRAME, MARK_Z, MARK_COLORS } from '@/components/ZephryxMark';
 
 /**
@@ -53,10 +52,8 @@ export default function OgImage() {
             marginBottom: 30,
           }}
         >
-          {ACCEPTING_ENGAGEMENTS && (
-            <div style={{ width: 9, height: 9, borderRadius: 999, background: '#29d391', display: 'flex' }} />
-          )}
-          {ACCEPTING_ENGAGEMENTS ? 'AVAILABLE FOR NEW ENGAGEMENTS' : 'OFFENSIVE SECURITY'}
+          <div style={{ width: 9, height: 9, borderRadius: 999, background: ENGAGEMENT.accepting ? '#29d391' : '#ffb020', display: 'flex' }} />
+          {MODE.status.toUpperCase()}
         </div>
 
         <div
@@ -119,7 +116,7 @@ export default function OgImage() {
             color: '#5c6675',
           }}
         >
-          web · network · cloud · AD · API
+          web · API · network · AD · detection
         </div>
       </div>
     ),
