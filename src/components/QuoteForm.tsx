@@ -1,412 +1,607 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { SERVICES } from '@/lib/site';
+import Link from 'next/link';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  EMAIL_RE,
+  ENGAGEMENT,
+  FORM_LIMITS,
+  MAILBOX,
+  NETWORK,
+  REQUEST_DEFAULTS,
+  REQUEST_OPTIONS,
+  SERVICE_CHOICES,
+  type Option,
+} from '@/lib/site';
 
-/* Mirror the server-side caps so the UI fails fast and identically. */
-const LIMITS = {
-  name: 80,
-  email: 120,
-  company: 100,
-  message: 4000,
-  maxServices: SERVICES.length,
-} as const;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-const COMPANY_SIZES = ['1–10', '11–50', '51–200', '201–1000', '1000+', 'Not sure'] as const;
+/* Caps come from FORM_LIMITS, the same constant the Worker reads, so the UI
+   fails fast and identically. */
 
 type Status =
   | { state: 'idle' }
   | { state: 'submitting' }
-  | { state: 'ok'; msg: string }
+  | { state: 'ok' }
   | { state: 'error'; msg: string };
 
-type Fields = {
+/** One form or the other, fixed at build time by ENGAGEMENT.accepting. */
+export default function QuoteForm() {
+  return ENGAGEMENT.accepting ? <ScopingForm /> : <WaitlistForm />;
+}
+
+/* ------------------------------------------------------------ scoping request */
+
+type ScopingFields = {
   name: string;
   email: string;
   company: string;
-  companySize: string;
-  services: string[];
-  message: string;
+  service: string;
+  size: string;
+  environment: string;
+  timeline: string;
+  notes: string;
+  authorised: boolean;
+  consent: boolean;
 };
 
-const VALIDATED = ['name', 'email', 'message'] as const;
-type Validated = (typeof VALIDATED)[number];
+type ScopingErrors = Partial<Record<'name' | 'email' | 'authorised' | 'consent', string>>;
 
-function validateField(k: keyof Fields, v: string): string | undefined {
-  const trimmed = v.trim();
-  switch (k) {
-    case 'name':
-      return trimmed.length < 2 ? 'Tell me who you are (2+ chars).' : undefined;
-    case 'email':
-      return EMAIL_RE.test(trimmed) ? undefined : 'A reachable work email, please.';
-    case 'message':
-      return trimmed.length < 20 ? 'Give me enough to scope this (20+ chars).' : undefined;
-    default:
-      return undefined;
-  }
+function validateScoping(f: ScopingFields): ScopingErrors {
+  const errors: ScopingErrors = {};
+  if (f.name.trim().length < 2) errors.name = 'Tell me who you are (2+ characters).';
+  if (!EMAIL_RE.test(f.email.trim())) errors.email = 'Enter a work email I can reply to.';
+  if (!f.authorised) errors.authorised = 'Please confirm you are authorised to approve testing.';
+  if (!f.consent) errors.consent = 'Please agree to be contacted about this request.';
+  return errors;
 }
 
-export default function QuoteForm() {
-  const [fields, setFields] = useState<Fields>({
-    name: '',
-    email: '',
-    company: '',
-    companySize: '',
-    services: [],
-    message: '',
-  });
-  const [status, setStatus] = useState<Status>({ state: 'idle' });
-  const [errors, setErrors] = useState<Partial<Record<keyof Fields, string>>>({});
+/**
+ * Field state, validation errors and the "validate as you type once a submit
+ * was attempted" behaviour, shared by both forms. `validate` returns errors
+ * keyed in focus order, so `check()` can report the first bad field.
+ */
+function useFields<F extends Record<string, string | boolean>, K extends string>(
+  initial: F,
+  validate: (f: F) => Partial<Record<K, string>>,
+) {
+  const [fields, setFields] = useState<F>(initial);
+  const [errors, setErrors] = useState<Partial<Record<K, string>>>({});
   const [attempted, setAttempted] = useState(false);
 
-  // Honeypot + time-trap: bots fill hidden fields and submit instantly.
-  const honeypotRef = useRef<HTMLInputElement>(null);
-  const mountedAt = useRef<number>(Date.now());
-
-  const nameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const messageRef = useRef<HTMLTextAreaElement>(null);
-  const fieldRefs: Record<Validated, React.RefObject<HTMLElement | null>> = {
-    name: nameRef,
-    email: emailRef,
-    message: messageRef,
-  };
-
-  const setText =
-    (k: 'name' | 'email' | 'company', max: number) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value.slice(0, max);
-      setFields((f) => ({ ...f, [k]: value }));
-      setErrors((prev) => {
-        if (!attempted && !prev[k]) return prev;
-        return { ...prev, [k]: validateField(k, value) };
-      });
+  const set =
+    <P extends keyof F>(k: P, max?: number) =>
+    (value: F[P]) => {
+      const next = typeof value === 'string' && max ? (value.slice(0, max) as F[P]) : value;
+      const updated = { ...fields, [k]: next };
+      setFields(updated);
+      if (attempted) setErrors(validate(updated));
     };
 
-  const setMessage = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value.slice(0, LIMITS.message);
-    setFields((f) => ({ ...f, message: value }));
-    setErrors((prev) => {
-      if (!attempted && !prev.message) return prev;
-      return { ...prev, message: validateField('message', value) };
-    });
+  /** Validates everything; returns the first field with an error, if any. */
+  const check = (): K | undefined => {
+    setAttempted(true);
+    const found = validate(fields);
+    setErrors(found);
+    return (Object.keys(found) as K[]).find((k) => found[k]);
   };
 
-  const onBlur =
-    (k: 'name' | 'email' | 'message') =>
-    (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const value = e.target.value;
-      if (!value.trim() && !attempted) return;
-      setErrors((prev) => ({ ...prev, [k]: validateField(k, value) }));
-    };
+  return { fields, errors, set, check };
+}
 
-  const toggleService = (id: string) => {
-    setFields((f) => {
-      const has = f.services.includes(id);
-      const next = has ? f.services.filter((s) => s !== id) : [...f.services, id];
-      return { ...f, services: next.slice(0, LIMITS.maxServices) };
-    });
-  };
+function ScopingForm() {
+  const { fields, errors, set, check } = useFields<ScopingFields, keyof ScopingErrors>(
+    {
+      name: '',
+      email: '',
+      company: '',
+      ...REQUEST_DEFAULTS,
+      notes: '',
+      authorised: false,
+      consent: false,
+    },
+    validateScoping,
+  );
+  const [status, setStatus] = useState<Status>({ state: 'idle' });
+  const shell = useShell(status);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status.state === 'submitting') return;
 
-    setAttempted(true);
-
-    const next: Partial<Record<keyof Fields, string>> = {};
-    for (const k of VALIDATED) next[k] = validateField(k, fields[k]);
-    setErrors(next);
-
-    const firstBad = VALIDATED.find((k) => next[k]);
+    const firstBad = check();
     if (firstBad) {
-      fieldRefs[firstBad].current?.focus();
+      document.getElementById(`req-${firstBad}`)?.focus();
       return;
     }
 
     setStatus({ state: 'submitting' });
-
-    try {
-      const res = await fetch('/api/quote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: fields.name.trim(),
-          email: fields.email.trim(),
-          company: fields.company.trim(),
-          companySize: fields.companySize,
-          services: fields.services,
-          message: fields.message.trim(),
-          // anti-spam signals
-          hp: honeypotRef.current?.value ?? '',
-          elapsedMs: Date.now() - mountedAt.current,
-        }),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (res.ok && data?.ok) {
-        setStatus({
-          state: 'ok',
-          msg: "Received. I read every request myself and reply within one business day, usually sooner.",
-        });
-        setFields({ name: '', email: '', company: '', companySize: '', services: [], message: '' });
-        setErrors({});
-        setAttempted(false);
-        return;
-      }
-
-      setStatus({
-        state: 'error',
-        msg: data?.error ?? 'Send failed. Email hello@security.zephryx.in directly.',
-      });
-    } catch {
-      setStatus({
-        state: 'error',
-        msg: 'Network error. The channel may be offline — reach me at hello@security.zephryx.in.',
-      });
-    }
+    const result = await send('/api/quote', {
+      name: fields.name.trim(),
+      email: fields.email.trim(),
+      company: fields.company.trim(),
+      service: fields.service,
+      size: fields.size,
+      environment: fields.environment,
+      timeline: fields.timeline,
+      notes: fields.notes.trim(),
+      authorised: fields.authorised,
+      consent: fields.consent,
+      hp: shell.honeypotRef.current?.value ?? '',
+      elapsedMs: Date.now() - shell.mountedAt.current,
+    });
+    setStatus(result);
   };
+
+  if (status.state === 'ok') {
+    return (
+      <Done
+        title="Request received"
+        headingRef={shell.doneRef}
+        body={`I will reply within ${ENGAGEMENT.replyWithin} to arrange the scoping call. If you do not hear from me by then, write to ${MAILBOX.address}.`}
+      />
+    );
+  }
 
   const disabled = status.state === 'submitting';
 
   return (
     <form onSubmit={onSubmit} noValidate className="panel clip-corner relative overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-line bg-elevated/70 px-4 py-2.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-red-blood/80" />
-        <span className="h-2.5 w-2.5 rounded-full bg-warn/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-signal/70" />
-        <span className="ml-3 font-mono text-[11px] tracking-wide text-ink-faint">
-          zephryx@security — ./request-assessment
-        </span>
-      </div>
+      <TitleBar label="scoping-request" />
 
       <div className="space-y-6 p-6 sm:p-8">
-        {/* honeypot — visually hidden, off the a11y tree, off tab order */}
-        <div aria-hidden className="absolute left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden">
-          <label htmlFor="hp-company">Company website (leave blank)</label>
-          <input ref={honeypotRef} id="hp-company" name="hp" type="text" tabIndex={-1} autoComplete="off" />
-        </div>
+        <Honeypot inputRef={shell.honeypotRef} />
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field
-            id="name"
-            label="whoami"
-            hint="your name"
+          <TextField
+            id="req-name"
+            label="Your name"
             value={fields.name}
-            max={LIMITS.name}
-            onChange={setText('name', LIMITS.name)}
-            onBlur={onBlur('name')}
+            max={FORM_LIMITS.name}
+            onChange={set('name', FORM_LIMITS.name)}
             error={errors.name}
             disabled={disabled}
             required
             autoComplete="name"
-            inputRef={nameRef}
           />
-          <Field
-            id="email"
-            label="reply-to"
-            hint="you@company.com"
+          <TextField
+            id="req-email"
+            label="Work email"
             type="email"
             value={fields.email}
-            max={LIMITS.email}
-            onChange={setText('email', LIMITS.email)}
-            onBlur={onBlur('email')}
+            max={FORM_LIMITS.email}
+            onChange={set('email', FORM_LIMITS.email)}
             error={errors.email}
             disabled={disabled}
             required
             autoComplete="email"
-            inputRef={emailRef}
+          />
+        </div>
+
+        <TextField
+          id="req-company"
+          label="Company and website"
+          value={fields.company}
+          max={FORM_LIMITS.company}
+          onChange={set('company', FORM_LIMITS.company)}
+          disabled={disabled}
+          autoComplete="organization"
+        />
+
+        {/* Full width: the size labels are too long for a half-width select. */}
+        <div className="grid gap-5">
+          <SelectField
+            id="req-service"
+            label="What do you want tested?"
+            value={fields.service}
+            options={SERVICE_CHOICES}
+            onChange={set('service')}
+            disabled={disabled}
+          />
+          <SelectField
+            id="req-size"
+            label="Roughly how big is it?"
+            value={fields.size}
+            options={REQUEST_OPTIONS.size}
+            onChange={set('size')}
+            disabled={disabled}
           />
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field
-            id="company"
-            label="company"
-            hint="optional"
-            value={fields.company}
-            max={LIMITS.company}
-            onChange={setText('company', LIMITS.company)}
+          <SelectField
+            id="req-environment"
+            label="Where would testing run?"
+            value={fields.environment}
+            options={REQUEST_OPTIONS.environment}
+            onChange={set('environment')}
             disabled={disabled}
-            autoComplete="organization"
           />
-          <div>
-            <LabelRow htmlFor="companySize" label="company size" hint="optional" />
-            <select
-              id="companySize"
-              name="companySize"
-              value={fields.companySize}
-              onChange={(e) => setFields((f) => ({ ...f, companySize: e.target.value }))}
-              disabled={disabled}
-              className="w-full appearance-none border border-line bg-void/70 px-3.5 py-2.5 font-mono text-[13.5px] text-ink focus:border-red-deep/70 disabled:opacity-60"
-            >
-              <option value="">Select…</option>
-              {COMPANY_SIZES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectField
+            id="req-timeline"
+            label="When do you need results?"
+            value={fields.timeline}
+            options={REQUEST_OPTIONS.timeline}
+            onChange={set('timeline')}
+            disabled={disabled}
+          />
         </div>
-
-        <fieldset>
-          <legend className="mb-2.5 font-mono text-[12px] tracking-wide text-ink-dim">
-            <span className="text-red-blood/70">$</span> what are you looking for?{' '}
-            <span className="font-mono text-[10px] text-ink-faint">(optional, pick any)</span>
-          </legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {SERVICES.map((s) => {
-              const checked = fields.services.includes(s.id);
-              return (
-                <label
-                  key={s.id}
-                  className={`flex cursor-pointer items-center gap-2.5 border px-3 py-2 font-mono text-[12.5px] transition-colors ${
-                    checked ? 'border-red-deep/70 bg-red-ash/10 text-ink' : 'border-line text-ink-dim hover:border-line-hot'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleService(s.id)}
-                    disabled={disabled}
-                    className="h-3.5 w-3.5 accent-red-blood"
-                  />
-                  {s.short}
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
 
         <div>
-          <LabelRow htmlFor="message" label="scope" hint={`${fields.message.length} / ${LIMITS.message}`} />
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <label htmlFor="req-notes" className="text-sm font-medium text-ink">
+              Anything else I should know? <span className="font-normal text-ink-dim">(optional)</span>
+            </label>
+            <span className="font-mono text-xs text-ink-dim">
+              {fields.notes.length} / {FORM_LIMITS.notes}
+            </span>
+          </div>
           <textarea
-            ref={messageRef}
-            id="message"
-            name="message"
-            rows={6}
-            value={fields.message}
-            onChange={setMessage}
-            onBlur={onBlur('message')}
-            maxLength={LIMITS.message}
+            id="req-notes"
+            name="notes"
+            rows={5}
+            value={fields.notes}
+            onChange={(e) => set('notes', FORM_LIMITS.notes)(e.target.value)}
+            maxLength={FORM_LIMITS.notes}
             disabled={disabled}
-            required
             spellCheck
-            placeholder="What are you building, what needs testing, and any timeline or deadline (audit, funding round, launch) driving it."
-            aria-invalid={!!errors.message}
-            aria-describedby={errors.message ? 'message-error' : undefined}
-            className="w-full resize-y border border-line bg-void/70 p-3.5 font-mono text-[13.5px] leading-relaxed text-ink placeholder:text-ink-faint focus:border-red-deep/70 disabled:opacity-60"
+            className="w-full resize-y border border-line bg-void/70 p-3.5 text-base leading-relaxed text-ink focus:border-red-deep/70 disabled:opacity-60"
           />
-          {errors.message ? (
-            <p id="message-error" className="mt-1.5 font-mono text-[12px] text-red-blood">
-              ! {errors.message}
-            </p>
-          ) : null}
         </div>
 
-        {/* Both regions stay mounted so assistive tech is already watching them
-            when the result lands. */}
-        <div
-          role="status"
-          className="empty:m-0 border border-signal/30 bg-signal/5 px-4 py-3 font-mono text-[13px] text-signal empty:border-0 empty:p-0"
-        >
-          {status.state === 'ok' ? (
-            <>
-              <span className="mr-1">[OK]</span> {status.msg}
-            </>
-          ) : null}
-        </div>
-        <div
-          role="alert"
-          className="empty:m-0 border border-red-deep/40 bg-red-ash/10 px-4 py-3 font-mono text-[13px] text-red-blood empty:border-0 empty:p-0"
-        >
-          {status.state === 'error' ? (
-            <>
-              <span className="mr-1">[ERR]</span> {status.msg}
-            </>
-          ) : null}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="font-mono text-[11px] text-ink-faint">
-            <span className="text-red-blood/70"># </span>
-            NDA on request · no spam · no trackers
-          </p>
-          <button
-            type="submit"
+        <div className="space-y-4">
+          <CheckField
+            id="req-authorised"
+            checked={fields.authorised}
+            onChange={set('authorised')}
+            error={errors.authorised}
             disabled={disabled}
-            className="clip-tab inline-flex items-center gap-2 border border-red-deep bg-red-core px-7 py-3 font-mono text-sm font-medium text-void transition-all duration-300 hover:shadow-[0_0_30px_-4px_rgba(255,45,75,0.8)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {disabled ? (
-              <>
-                <span className="animate-blink">▌</span> sending…
-              </>
-            ) : (
-              <>./send-request</>
-            )}
-          </button>
+            I own this system, or I am authorised to approve testing it.
+          </CheckField>
+          <CheckField
+            id="req-consent"
+            checked={fields.consent}
+            onChange={set('consent')}
+            error={errors.consent}
+            disabled={disabled}
+          >
+            I agree to be contacted about this request. My details are used only to reply to it, as
+            described in the <PrivacyLink />.
+          </CheckField>
+        </div>
+
+        <ResultRegion status={status} />
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+          <SubmitButton disabled={disabled} idle="Send request" />
+          <p className="text-sm text-ink-dim">
+            Or write to{' '}
+            <a href={`mailto:${MAILBOX.address}`} className="font-mono text-red-blood hover:underline">
+              {MAILBOX.address}
+            </a>
+          </p>
         </div>
       </div>
     </form>
   );
 }
 
-function LabelRow({ htmlFor, label, hint }: { htmlFor: string; label: string; hint?: string }) {
+/* ------------------------------------------------------------------- waitlist */
+
+type WaitlistFields = { name: string; email: string; service: string; consent: boolean };
+type WaitlistErrors = Partial<Record<'email' | 'consent', string>>;
+
+function validateWaitlist(f: WaitlistFields): WaitlistErrors {
+  const errors: WaitlistErrors = {};
+  if (!EMAIL_RE.test(f.email.trim())) errors.email = 'Enter a work email I can reach you on.';
+  if (!f.consent) errors.consent = 'Please agree to be emailed when scheduling opens.';
+  return errors;
+}
+
+function WaitlistForm() {
+  const { fields, errors, set, check } = useFields<WaitlistFields, keyof WaitlistErrors>(
+    { name: '', email: '', service: REQUEST_DEFAULTS.service, consent: false },
+    validateWaitlist,
+  );
+  const [status, setStatus] = useState<Status>({ state: 'idle' });
+  const shell = useShell(status);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (status.state === 'submitting') return;
+
+    const firstBad = check();
+    if (firstBad) {
+      document.getElementById(`wl-${firstBad}`)?.focus();
+      return;
+    }
+
+    setStatus({ state: 'submitting' });
+    const result = await send('/api/waitlist', {
+      name: fields.name.trim(),
+      email: fields.email.trim(),
+      service: fields.service,
+      consent: fields.consent,
+      hp: shell.honeypotRef.current?.value ?? '',
+      elapsedMs: Date.now() - shell.mountedAt.current,
+    });
+    setStatus(result);
+  };
+
+  if (status.state === 'ok') {
+    return (
+      <Done
+        title="You are on the waitlist"
+        headingRef={shell.doneRef}
+        body="I will email you once when scheduling opens. Until then you can read how I work and what I charge."
+      >
+        <p className="mt-6 flex flex-wrap gap-x-7 gap-y-3 text-sm font-medium">
+          <Link href="/pricing/" className="text-red-blood hover:underline">
+            See pricing
+          </Link>
+          <a
+            href={NETWORK[1].href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-red-blood hover:underline"
+          >
+            Read the writeups <span aria-hidden>↗</span>
+          </a>
+        </p>
+      </Done>
+    );
+  }
+
+  const disabled = status.state === 'submitting';
+
   return (
-    <div className="mb-2 flex items-baseline justify-between gap-3">
-      <label htmlFor={htmlFor} className="font-mono text-[12px] tracking-wide text-ink-dim">
-        <span className="text-red-blood/70">$</span> {label}
-      </label>
-      {hint ? <span className="font-mono text-[10px] text-ink-faint">{hint}</span> : null}
+    <form onSubmit={onSubmit} noValidate className="panel clip-corner relative overflow-hidden">
+      <TitleBar label="waitlist" />
+
+      <div className="space-y-6 p-6 sm:p-8">
+        <Honeypot inputRef={shell.honeypotRef} />
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <TextField
+            id="wl-name"
+            label="Your name"
+            hint="optional"
+            value={fields.name}
+            max={FORM_LIMITS.name}
+            onChange={set('name', FORM_LIMITS.name)}
+            disabled={disabled}
+            autoComplete="name"
+          />
+          <TextField
+            id="wl-email"
+            label="Work email"
+            type="email"
+            value={fields.email}
+            max={FORM_LIMITS.email}
+            onChange={set('email', FORM_LIMITS.email)}
+            error={errors.email}
+            disabled={disabled}
+            required
+            autoComplete="email"
+          />
+        </div>
+
+        <SelectField
+          id="wl-service"
+          label="What would you want tested?"
+          value={fields.service}
+          options={SERVICE_CHOICES}
+          onChange={set('service')}
+          disabled={disabled}
+        />
+
+        <CheckField
+          id="wl-consent"
+          checked={fields.consent}
+          onChange={set('consent')}
+          error={errors.consent}
+          disabled={disabled}
+        >
+          Email me when scheduling opens. I can unsubscribe at any time, and my details are handled as
+          described in the <PrivacyLink />.
+        </CheckField>
+
+        <ResultRegion status={status} />
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+          <SubmitButton disabled={disabled} idle="Join the waitlist" />
+          <p className="text-sm text-ink-dim">
+            Or write to{' '}
+            <a href={`mailto:${MAILBOX.address}`} className="font-mono text-red-blood hover:underline">
+              {MAILBOX.address}
+            </a>
+          </p>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+/* --------------------------------------------------------------------- shared */
+
+async function send(url: string, payload: Record<string, unknown>): Promise<Status> {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.ok) return { state: 'ok' };
+    return {
+      state: 'error',
+      msg: data?.error ?? `Send failed. Email ${MAILBOX.address} directly.`,
+    };
+  } catch {
+    return {
+      state: 'error',
+      msg: `Network error. The channel may be offline — reach me at ${MAILBOX.address}.`,
+    };
+  }
+}
+
+/** Honeypot + time-trap refs, and focus management for the success screen. */
+function useShell(status: Status) {
+  // Bots fill hidden fields and submit instantly.
+  const honeypotRef = useRef<HTMLInputElement>(null);
+  const mountedAt = useRef<number>(Date.now());
+  const doneRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (status.state === 'ok') doneRef.current?.focus();
+  }, [status.state]);
+
+  return { honeypotRef, mountedAt, doneRef };
+}
+
+function TitleBar({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-line bg-elevated/70 px-4 py-2.5">
+      <span className="h-2.5 w-2.5 rounded-full bg-red-blood/80" />
+      <span className="h-2.5 w-2.5 rounded-full bg-warn/70" />
+      <span className="h-2.5 w-2.5 rounded-full bg-signal/70" />
+      <span className="ml-3 font-mono text-[11px] tracking-wide text-ink-dim">
+        zephryx@security — {label}
+      </span>
     </div>
   );
 }
 
-function Field({
+function Honeypot({ inputRef }: { inputRef: React.Ref<HTMLInputElement> }) {
+  // visually hidden, off the a11y tree, off tab order
+  return (
+    <div aria-hidden className="absolute left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden">
+      <label htmlFor="hp-field">Leave this field empty</label>
+      <input ref={inputRef} id="hp-field" name="hp" type="text" tabIndex={-1} autoComplete="off" />
+    </div>
+  );
+}
+
+function PrivacyLink() {
+  return (
+    <Link href="/privacy/" className="text-red-blood underline-offset-2 hover:underline">
+      privacy notice
+    </Link>
+  );
+}
+
+/** Both regions stay mounted so assistive tech is already watching them when the result lands. */
+function ResultRegion({ status }: { status: Status }) {
+  return (
+    <>
+      <div role="status" className="sr-only">
+        {status.state === 'submitting' ? 'Sending' : ''}
+      </div>
+      <div
+        role="alert"
+        className="empty:m-0 border border-red-deep/40 bg-red-ash/10 px-4 py-3 text-sm text-red-blood empty:border-0 empty:p-0"
+      >
+        {status.state === 'error' ? status.msg : null}
+      </div>
+    </>
+  );
+}
+
+function SubmitButton({ disabled, idle }: { disabled: boolean; idle: string }) {
+  return (
+    <button
+      type="submit"
+      disabled={disabled}
+      className="clip-tab inline-flex min-h-11 items-center gap-2 border border-red-deep bg-red-core px-7 py-3 font-mono text-sm font-medium text-void transition-all duration-300 hover:shadow-[0_0_30px_-4px_rgba(255,45,75,0.8)] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {disabled ? (
+        <>
+          <span className="animate-blink">▌</span> Sending…
+        </>
+      ) : (
+        idle
+      )}
+    </button>
+  );
+}
+
+function Done({
+  title,
+  body,
+  headingRef,
+  children,
+}: {
+  title: string;
+  body: string;
+  headingRef: React.Ref<HTMLHeadingElement>;
+  children?: ReactNode;
+}) {
+  return (
+    <div role="status" className="panel clip-corner p-7 sm:p-9">
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="font-mono text-2xl font-bold tracking-tight text-ink outline-none"
+      >
+        <span className="text-signal">✓</span> {title}
+      </h2>
+      <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-dim">{body}</p>
+      {children}
+    </div>
+  );
+}
+
+function FieldLabel({ htmlFor, label, hint }: { htmlFor: string; label: string; hint?: string }) {
+  return (
+    <label htmlFor={htmlFor} className="mb-2 block text-sm font-medium text-ink">
+      {label}
+      {hint ? <span className="font-normal text-ink-dim"> ({hint})</span> : null}
+    </label>
+  );
+}
+
+function FieldError({ id, error }: { id: string; error?: string }) {
+  return error ? (
+    <p id={id} className="mt-1.5 text-sm text-red-blood">
+      {error}
+    </p>
+  ) : null;
+}
+
+function TextField({
   id,
   label,
   hint,
   value,
   onChange,
-  onBlur,
   max,
   type = 'text',
   error,
   disabled,
   required,
   autoComplete,
-  inputRef,
 }: {
   id: string;
   label: string;
   hint?: string;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onChange: (value: string) => void;
   max: number;
   type?: string;
   error?: string;
   disabled?: boolean;
   required?: boolean;
   autoComplete?: string;
-  inputRef?: React.Ref<HTMLInputElement>;
 }) {
   const errorId = `${id}-error`;
   return (
     <div>
-      <LabelRow htmlFor={id} label={label} hint={hint} />
+      <FieldLabel htmlFor={id} label={label} hint={hint} />
       <input
-        ref={inputRef}
         id={id}
         name={id}
         type={type}
         value={value}
-        onChange={onChange}
-        onBlur={onBlur}
+        onChange={(e) => onChange(e.target.value)}
         maxLength={max}
         disabled={disabled}
         required={required}
@@ -414,13 +609,91 @@ function Field({
         spellCheck={false}
         aria-invalid={!!error}
         aria-describedby={error ? errorId : undefined}
-        className="w-full border border-line bg-void/70 px-3.5 py-2.5 font-mono text-[13.5px] text-ink placeholder:text-ink-faint focus:border-red-deep/70 disabled:opacity-60"
+        className="min-h-11 w-full border border-line bg-void/70 px-3.5 py-2.5 text-base text-ink focus:border-red-deep/70 disabled:opacity-60"
       />
-      {error ? (
-        <p id={errorId} className="mt-1.5 font-mono text-[12px] text-red-blood">
-          ! {error}
-        </p>
-      ) : null}
+      <FieldError id={errorId} error={error} />
+    </div>
+  );
+}
+
+function SelectField({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  options: readonly Option[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <FieldLabel htmlFor={id} label={label} />
+      <div className="relative">
+        <select
+          id={id}
+          name={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className="min-h-11 w-full appearance-none border border-line bg-void/70 py-2.5 pl-3.5 pr-10 text-base text-ink focus:border-red-deep/70 disabled:opacity-60"
+        >
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-dim"
+        >
+          ▾
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function CheckField({
+  id,
+  checked,
+  onChange,
+  error,
+  disabled,
+  children,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  error?: string;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  const errorId = `${useId()}-error`;
+  return (
+    <div>
+      <div className="flex items-start gap-3">
+        <input
+          id={id}
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          disabled={disabled}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-red-blood"
+        />
+        <label htmlFor={id} className="cursor-pointer text-[15px] leading-relaxed text-ink-dim">
+          {children}
+        </label>
+      </div>
+      <FieldError id={errorId} error={error} />
     </div>
   );
 }

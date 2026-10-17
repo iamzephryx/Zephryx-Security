@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
+import Cta from '@/components/Cta';
 import { MAILBOX, PUBLIC_WORK, SITE } from '@/lib/site';
-import EngagementNotice from '@/components/EngagementNotice';
 import Reveal from '@/components/Reveal';
 import { buildMetadata } from '@/lib/metadata';
 
@@ -16,7 +14,6 @@ export const metadata: Metadata = buildMetadata({
 export default function About() {
   return (
     <div className="mx-auto max-w-3xl px-5 pt-32 pb-16 sm:px-8">
-      <EngagementNotice className="mb-8" />
       <Reveal>
         <p className="font-mono text-[11px] tracking-[0.3em] text-red-blood/70">ABOUT</p>
         <h1 className="mt-3 font-mono text-4xl font-bold tracking-tight text-ink sm:text-5xl">
@@ -84,7 +81,6 @@ export default function About() {
         </section>
       </Reveal>
 
-      {ACCEPTING_ENGAGEMENTS && (
       <Reveal>
         <section className="mt-16 panel clip-corner p-7">
           <h2 className="font-mono text-lg font-semibold text-ink">Reach out</h2>
@@ -94,17 +90,11 @@ export default function About() {
             <a href={`mailto:${MAILBOX.address}`} className="font-mono text-red-blood hover:underline">
               {MAILBOX.address}
             </a>
-            , or use the request form.
+            , or use the contact page.
           </p>
-          <Link
-            href="/contact/"
-            className="clip-tab mt-6 inline-flex items-center gap-2 border border-red-deep bg-red-core px-6 py-3 font-mono text-sm font-medium text-void transition-all duration-300 hover:shadow-[0_0_30px_-4px_rgba(255,45,75,0.8)]"
-          >
-            ./request-assessment
-          </Link>
+          <Cta className="mt-6" />
         </section>
       </Reveal>
-      )}
     </div>
   );
 }

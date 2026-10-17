@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
-import { MAILBOX, NAV, NETWORK, SITE } from '@/lib/site';
+import { DISCLOSURE, ENGAGEMENT, LEGAL, MAILBOX, MODE, NAV, NETWORK, SITE } from '@/lib/site';
 import ZephryxMark from '@/components/ZephryxMark';
 
 export default function Footer() {
@@ -30,6 +29,7 @@ export default function Footer() {
               </a>
               .
             </p>
+            {LEGAL ? <p className="mt-3 text-sm leading-relaxed text-ink-dim">{LEGAL.line}</p> : null}
           </div>
 
           <nav aria-label="Footer">
@@ -49,6 +49,19 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <a
+                  href={DISCLOSURE.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 font-mono text-sm text-ink-dim transition-colors hover:text-red-blood"
+                >
+                  {DISCLOSURE.label}
+                  <span className="text-ink-faint" aria-hidden>
+                    ↗
+                  </span>
+                </a>
+              </li>
               <li>
                 <Link
                   href="/privacy/"
@@ -97,14 +110,12 @@ export default function Footer() {
         <div className="mt-10 flex flex-col gap-3 border-t border-line/60 pt-6 font-mono text-[11px] text-ink-faint sm:flex-row sm:items-center sm:justify-between">
           <p>© {year} {SITE.parentName}. All rights reserved.</p>
           <p className="flex items-center gap-2">
-            {ACCEPTING_ENGAGEMENTS ? (
-              <>
-                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-signal" />
-                available for new engagements
-              </>
-            ) : (
-              'not accepting new engagements right now'
-            )}
+            <span
+              className={`inline-block h-1.5 w-1.5 rounded-full ${
+                ENGAGEMENT.accepting ? 'animate-pulse bg-signal' : 'bg-warn'
+              }`}
+            />
+            {MODE.status}
           </p>
         </div>
       </div>

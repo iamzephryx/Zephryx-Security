@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import EngagementNotice from '@/components/EngagementNotice';
+import Cta from '@/components/Cta';
 import Reveal from '@/components/Reveal';
-import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
-import { PROCESS } from '@/lib/site';
+import { EXTRA_RULES, PROCESS, RULES } from '@/lib/site';
 import { buildMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = buildMetadata({
@@ -13,17 +11,11 @@ export const metadata: Metadata = buildMetadata({
   path: '/process/',
 });
 
-const RULES = [
-  'Nothing is tested outside the written scope — no exceptions, no "while I was in there".',
-  'A critical, exploitable-right-now finding gets reported immediately, not held for the final report.',
-  'Destructive testing (anything that could cause an outage) is opt-in and named explicitly in scope, never assumed.',
-  'An NDA is standard before scoping details are shared, and confirmed again in the rules of engagement.',
-];
+const ALL_RULES = [...RULES.map((r) => `${r.title}. ${r.body}`), ...EXTRA_RULES];
 
 export default function Process() {
   return (
     <div className="mx-auto max-w-4xl px-5 pt-32 pb-16 sm:px-8">
-      <EngagementNotice className="mb-8" />
       <Reveal>
         <p className="font-mono text-[11px] tracking-[0.3em] text-red-blood/70">PROCESS</p>
         <h1 className="mt-3 font-mono text-4xl font-bold tracking-tight text-ink sm:text-5xl">
@@ -54,7 +46,7 @@ export default function Process() {
         <section className="mt-16">
           <h2 className="font-mono text-2xl font-bold tracking-tight text-ink">Rules I hold myself to</h2>
           <ol className="mt-8 space-y-3">
-            {RULES.map((rule, i) => (
+            {ALL_RULES.map((rule, i) => (
               <li key={rule} className="panel flex items-start gap-4 p-4">
                 <span className="font-mono text-lg font-bold text-red-blood">
                   {String(i + 1).padStart(2, '0')}
@@ -66,23 +58,16 @@ export default function Process() {
         </section>
       </Reveal>
 
-      {ACCEPTING_ENGAGEMENTS && (
       <Reveal>
         <section className="panel clip-corner mt-14 p-7">
           <h2 className="font-mono text-lg font-semibold text-ink">Have a deadline driving this?</h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-dim">
             An audit date, a funding round, a customer's security questionnaire — say so on the
-            request form and the scoping call starts from your timeline, not a generic one.
+            scoping call and it starts from your timeline, not a generic one.
           </p>
-          <Link
-            href="/contact/"
-            className="clip-tab mt-6 inline-flex items-center gap-2 border border-red-deep bg-red-core px-6 py-3 font-mono text-sm font-medium text-void transition-all duration-300 hover:shadow-[0_0_30px_-4px_rgba(255,45,75,0.8)]"
-          >
-            ./request-assessment
-          </Link>
+          <Cta className="mt-6" />
         </section>
       </Reveal>
-      )}
     </div>
   );
 }
