@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
 import { MAILBOX, PUBLIC_WORK, SITE } from '@/lib/site';
+import EngagementNotice from '@/components/EngagementNotice';
 import Reveal from '@/components/Reveal';
 import { buildMetadata } from '@/lib/metadata';
 
@@ -14,6 +16,7 @@ export const metadata: Metadata = buildMetadata({
 export default function About() {
   return (
     <div className="mx-auto max-w-3xl px-5 pt-32 pb-16 sm:px-8">
+      <EngagementNotice className="mb-8" />
       <Reveal>
         <p className="font-mono text-[11px] tracking-[0.3em] text-red-blood/70">ABOUT</p>
         <h1 className="mt-3 font-mono text-4xl font-bold tracking-tight text-ink sm:text-5xl">
@@ -81,6 +84,7 @@ export default function About() {
         </section>
       </Reveal>
 
+      {ACCEPTING_ENGAGEMENTS && (
       <Reveal>
         <section className="mt-16 panel clip-corner p-7">
           <h2 className="font-mono text-lg font-semibold text-ink">Reach out</h2>
@@ -100,6 +104,7 @@ export default function About() {
           </Link>
         </section>
       </Reveal>
+      )}
     </div>
   );
 }

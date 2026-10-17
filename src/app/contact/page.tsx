@@ -1,17 +1,36 @@
 import type { Metadata } from 'next';
+import { ACCEPTING_ENGAGEMENTS, NOT_ACCEPTING_MESSAGE } from '@/lib/engagement';
 import { MAILBOX } from '@/lib/site';
 import Reveal from '@/components/Reveal';
 import QuoteForm from '@/components/QuoteForm';
 import { buildMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = buildMetadata({
-  title: 'Request an assessment',
-  description:
-    'Scope a penetration testing engagement — tell me what you\'re building, what needs testing, and any deadline driving it. Replies within one business day.',
-  path: '/contact/',
-});
+export const metadata: Metadata = buildMetadata(
+  ACCEPTING_ENGAGEMENTS
+    ? {
+        title: 'Request an assessment',
+        description:
+          'Scope a penetration testing engagement — tell me what you\'re building, what needs testing, and any deadline driving it. Replies within one business day.',
+        path: '/contact/',
+      }
+    : { title: 'Contact', description: NOT_ACCEPTING_MESSAGE, path: '/contact/' },
+);
 
 export default function Contact() {
+  if (!ACCEPTING_ENGAGEMENTS) {
+    return (
+      <div className="mx-auto max-w-3xl px-5 pt-32 pb-16 sm:px-8">
+        <p className="font-mono text-[11px] tracking-[0.3em] text-red-blood/70">CONTACT</p>
+        <h1 className="mt-3 font-mono text-4xl font-bold tracking-tight text-ink sm:text-5xl">
+          {NOT_ACCEPTING_MESSAGE}
+        </h1>
+        <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
+          The services and process pages stay up for reference.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-5 pt-32 pb-16 sm:px-8">
       <Reveal>

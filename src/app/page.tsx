@@ -1,6 +1,8 @@
 import Link from 'next/link';
+import EngagementNotice from '@/components/EngagementNotice';
 import Reveal from '@/components/Reveal';
 import SectionHeading from '@/components/SectionHeading';
+import { ACCEPTING_ENGAGEMENTS, NOT_ACCEPTING_MESSAGE } from '@/lib/engagement';
 import { FAQ, PROCESS, SERVICES, SITE } from '@/lib/site';
 
 const DIFFERENTIATORS = [
@@ -31,10 +33,15 @@ export default function Home() {
     <>
       {/* ---------------------------------------------------------------- hero */}
       <section className="relative mx-auto flex min-h-[92vh] max-w-6xl flex-col justify-center px-5 pt-24 pb-16 sm:px-8">
+        <EngagementNotice className="mb-8 self-start" />
         <Reveal>
           <p className="flex items-center gap-2.5 font-mono text-[11px] tracking-[0.3em] text-ink-faint">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-signal" />
-            OFFENSIVE SECURITY · AVAILABLE FOR NEW ENGAGEMENTS
+            {ACCEPTING_ENGAGEMENTS && (
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-signal" />
+            )}
+            {ACCEPTING_ENGAGEMENTS
+              ? 'OFFENSIVE SECURITY · AVAILABLE FOR NEW ENGAGEMENTS'
+              : 'OFFENSIVE SECURITY'}
           </p>
         </Reveal>
 
@@ -58,12 +65,14 @@ export default function Home() {
 
         <Reveal delay={200}>
           <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Link
-              href="/contact/"
-              className="clip-tab inline-flex items-center gap-2 border border-red-deep bg-red-core px-7 py-3.5 font-mono text-sm font-medium text-void transition-all duration-300 hover:shadow-[0_0_30px_-4px_rgba(255,45,75,0.8)]"
-            >
-              ./request-assessment
-            </Link>
+            {ACCEPTING_ENGAGEMENTS && (
+              <Link
+                href="/contact/"
+                className="clip-tab inline-flex items-center gap-2 border border-red-deep bg-red-core px-7 py-3.5 font-mono text-sm font-medium text-void transition-all duration-300 hover:shadow-[0_0_30px_-4px_rgba(255,45,75,0.8)]"
+              >
+                ./request-assessment
+              </Link>
+            )}
             <Link
               href="/services/"
               className="inline-flex items-center gap-2 border border-line px-7 py-3.5 font-mono text-sm text-ink-dim transition-colors duration-300 hover:border-red-deep/60 hover:text-red-blood"
@@ -144,6 +153,12 @@ export default function Home() {
           ))}
 
           <Reveal className="sm:col-span-2 lg:col-span-1">
+            {/* Paused: keep the closing cell (see comment above) but make it a plain notice. */}
+            {!ACCEPTING_ENGAGEMENTS ? (
+              <div className="flex h-full flex-col justify-center bg-surface p-6">
+                <h3 className="font-mono text-[15px] font-semibold text-ink">{NOT_ACCEPTING_MESSAGE}</h3>
+              </div>
+            ) : (
             <Link
               href="/contact/"
               className="group flex h-full flex-col justify-center bg-surface p-6 transition-colors duration-300 hover:bg-elevated"
@@ -160,6 +175,7 @@ export default function Home() {
                 start a conversation <span aria-hidden>→</span>
               </span>
             </Link>
+            )}
           </Reveal>
         </div>
       </section>
@@ -215,6 +231,7 @@ export default function Home() {
       </section>
 
       {/* ---------------------------------------------------------------------- CTA */}
+      {ACCEPTING_ENGAGEMENTS && (
       <section className="mx-auto max-w-4xl px-5 pb-24 sm:px-8">
         <Reveal>
           <div className="panel clip-corner flex flex-col items-start justify-between gap-6 p-8 sm:flex-row sm:items-center">
@@ -234,6 +251,7 @@ export default function Home() {
           </div>
         </Reveal>
       </section>
+      )}
     </>
   );
 }

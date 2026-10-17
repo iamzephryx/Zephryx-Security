@@ -30,6 +30,8 @@
  *  - LEADS_RL        KV namespace binding for rate limiting
  */
 
+import { ACCEPTING_ENGAGEMENTS, NOT_ACCEPTING_MESSAGE } from '../src/lib/engagement';
+
 interface KVLike {
   get: (key: string) => Promise<string | null>;
   put: (key: string, value: string, opts?: { expirationTtl?: number }) => Promise<void>;
@@ -113,6 +115,8 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/quote' || url.pathname === '/api/quote/') {
+      // Paused: answer before parsing, rate limiting, KV or mail — nothing is read, stored or sent.
+      if (!ACCEPTING_ENGAGEMENTS) return json({ ok: false, error: NOT_ACCEPTING_MESSAGE }, 503);
       if (request.method !== 'POST') return json({ ok: false, error: 'Method not allowed.' }, 405);
       return handleQuote(request, env);
     }

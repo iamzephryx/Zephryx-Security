@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 import { NAV, SITE } from '@/lib/site';
+import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
 import ZephryxMark from '@/components/ZephryxMark';
 
 /** Renders `Link` for an internal route, or a new-tab anchor for `external` — see NAV in site.ts. */
@@ -151,12 +152,14 @@ export default function Nav() {
               </span>
             );
           })}
-          <Link
-            href="/contact/"
-            className="clip-tab ml-2.5 flex items-baseline gap-1.5 border border-red-deep/70 bg-red-ash/25 px-3.5 py-2 font-mono text-[13px] text-red-blood transition-all duration-300 hover:bg-red-blood hover:text-void hover:shadow-[0_0_24px_-4px_rgba(255,45,75,0.7)]"
-          >
-            Request assessment
-          </Link>
+          {ACCEPTING_ENGAGEMENTS && (
+            <Link
+              href="/contact/"
+              className="clip-tab ml-2.5 flex items-baseline gap-1.5 border border-red-deep/70 bg-red-ash/25 px-3.5 py-2 font-mono text-[13px] text-red-blood transition-all duration-300 hover:bg-red-blood hover:text-void hover:shadow-[0_0_24px_-4px_rgba(255,45,75,0.7)]"
+            >
+              Request assessment
+            </Link>
+          )}
         </nav>
 
         <button
@@ -210,9 +213,11 @@ export default function Nav() {
               </span>
             );
           })}
-          <Link href="/contact/" className="py-3.5 font-mono text-sm text-red-blood" tabIndex={open ? undefined : -1}>
-            Request assessment →
-          </Link>
+          {ACCEPTING_ENGAGEMENTS && (
+            <Link href="/contact/" className="py-3.5 font-mono text-sm text-red-blood" tabIndex={open ? undefined : -1}>
+              Request assessment →
+            </Link>
+          )}
         </nav>
       </div>
       </header>

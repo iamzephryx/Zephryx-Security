@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import EngagementNotice from '@/components/EngagementNotice';
 import Reveal from '@/components/Reveal';
+import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
 import { PROCESS } from '@/lib/site';
 import { buildMetadata } from '@/lib/metadata';
 
@@ -21,6 +23,7 @@ const RULES = [
 export default function Process() {
   return (
     <div className="mx-auto max-w-4xl px-5 pt-32 pb-16 sm:px-8">
+      <EngagementNotice className="mb-8" />
       <Reveal>
         <p className="font-mono text-[11px] tracking-[0.3em] text-red-blood/70">PROCESS</p>
         <h1 className="mt-3 font-mono text-4xl font-bold tracking-tight text-ink sm:text-5xl">
@@ -63,6 +66,7 @@ export default function Process() {
         </section>
       </Reveal>
 
+      {ACCEPTING_ENGAGEMENTS && (
       <Reveal>
         <section className="panel clip-corner mt-14 p-7">
           <h2 className="font-mono text-lg font-semibold text-ink">Have a deadline driving this?</h2>
@@ -78,6 +82,7 @@ export default function Process() {
           </Link>
         </section>
       </Reveal>
+      )}
     </div>
   );
 }

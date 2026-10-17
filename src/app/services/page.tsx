@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import EngagementNotice from '@/components/EngagementNotice';
 import Reveal from '@/components/Reveal';
+import { ACCEPTING_ENGAGEMENTS } from '@/lib/engagement';
 import { SERVICES } from '@/lib/site';
 import { buildMetadata } from '@/lib/metadata';
 
@@ -14,6 +16,7 @@ export const metadata: Metadata = buildMetadata({
 export default function Services() {
   return (
     <div className="mx-auto max-w-6xl px-5 pt-32 pb-16 sm:px-8">
+      <EngagementNotice className="mb-8" />
       <Reveal>
         <p className="font-mono text-[11px] tracking-[0.3em] text-red-blood/70">SERVICES</p>
         <h1 className="mt-3 font-mono text-4xl font-bold tracking-tight text-ink sm:text-5xl">
@@ -21,12 +24,17 @@ export default function Services() {
         </h1>
         <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
           Every engagement is scoped to your actual environment before testing starts — nothing
-          here is a fixed package you have to bend your business to fit. If what you need isn't
-          a clean match for one of these, say so on the{' '}
-          <Link href="/contact/" className="text-red-blood hover:underline">
-            contact form
-          </Link>{' '}
-          and it gets scoped from scratch.
+          here is a fixed package you have to bend your business to fit.
+          {ACCEPTING_ENGAGEMENTS && (
+            <>
+              {' '}
+              If what you need isn't a clean match for one of these, say so on the{' '}
+              <Link href="/contact/" className="text-red-blood hover:underline">
+                contact form
+              </Link>{' '}
+              and it gets scoped from scratch.
+            </>
+          )}
         </p>
       </Reveal>
 
