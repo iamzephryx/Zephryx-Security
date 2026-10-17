@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
+  EMAIL_RE,
   ENGAGEMENT,
   FORM_LIMITS,
   MAILBOX,
   NETWORK,
+  REQUEST_DEFAULTS,
   REQUEST_OPTIONS,
   SERVICE_CHOICES,
   type Option,
@@ -14,8 +16,6 @@ import {
 
 /* Caps come from FORM_LIMITS, the same constant the Worker reads, so the UI
    fails fast and identically. */
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type Status =
   | { state: 'idle' }
@@ -54,43 +54,60 @@ function validateScoping(f: ScopingFields): ScopingErrors {
   return errors;
 }
 
-function ScopingForm() {
-  const [fields, setFields] = useState<ScopingFields>({
-    name: '',
-    email: '',
-    company: '',
-    service: SERVICE_CHOICES[0].id,
-    size: REQUEST_OPTIONS.size[0].id,
-    environment: REQUEST_OPTIONS.environment[0].id,
-    timeline: REQUEST_OPTIONS.timeline[0].id,
-    notes: '',
-    authorised: false,
-    consent: false,
-  });
-  const [errors, setErrors] = useState<ScopingErrors>({});
+/**
+ * Field state, validation errors and the "validate as you type once a submit
+ * was attempted" behaviour, shared by both forms. `validate` returns errors
+ * keyed in focus order, so `check()` can report the first bad field.
+ */
+function useFields<F extends Record<string, string | boolean>, K extends string>(
+  initial: F,
+  validate: (f: F) => Partial<Record<K, string>>,
+) {
+  const [fields, setFields] = useState<F>(initial);
+  const [errors, setErrors] = useState<Partial<Record<K, string>>>({});
   const [attempted, setAttempted] = useState(false);
-  const [status, setStatus] = useState<Status>({ state: 'idle' });
-  const shell = useShell(status);
 
   const set =
-    <K extends keyof ScopingFields>(k: K, max?: number) =>
-    (value: ScopingFields[K]) => {
-      const next = typeof value === 'string' && max ? (value.slice(0, max) as ScopingFields[K]) : value;
-      setFields((f) => {
-        const updated = { ...f, [k]: next };
-        if (attempted) setErrors(validateScoping(updated));
-        return updated;
-      });
+    <P extends keyof F>(k: P, max?: number) =>
+    (value: F[P]) => {
+      const next = typeof value === 'string' && max ? (value.slice(0, max) as F[P]) : value;
+      const updated = { ...fields, [k]: next };
+      setFields(updated);
+      if (attempted) setErrors(validate(updated));
     };
+
+  /** Validates everything; returns the first field with an error, if any. */
+  const check = (): K | undefined => {
+    setAttempted(true);
+    const found = validate(fields);
+    setErrors(found);
+    return (Object.keys(found) as K[]).find((k) => found[k]);
+  };
+
+  return { fields, errors, set, check };
+}
+
+function ScopingForm() {
+  const { fields, errors, set, check } = useFields<ScopingFields, keyof ScopingErrors>(
+    {
+      name: '',
+      email: '',
+      company: '',
+      ...REQUEST_DEFAULTS,
+      notes: '',
+      authorised: false,
+      consent: false,
+    },
+    validateScoping,
+  );
+  const [status, setStatus] = useState<Status>({ state: 'idle' });
+  const shell = useShell(status);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status.state === 'submitting') return;
 
-    setAttempted(true);
-    const found = validateScoping(fields);
-    setErrors(found);
-    const firstBad = (['name', 'email', 'authorised', 'consent'] as const).find((k) => found[k]);
+    const firstBad = check();
     if (firstBad) {
       document.getElementById(`req-${firstBad}`)?.focus();
       return;
@@ -281,36 +298,18 @@ function validateWaitlist(f: WaitlistFields): WaitlistErrors {
 }
 
 function WaitlistForm() {
-  const [fields, setFields] = useState<WaitlistFields>({
-    name: '',
-    email: '',
-    service: SERVICE_CHOICES[0].id,
-    consent: false,
-  });
-  const [errors, setErrors] = useState<WaitlistErrors>({});
-  const [attempted, setAttempted] = useState(false);
+  const { fields, errors, set, check } = useFields<WaitlistFields, keyof WaitlistErrors>(
+    { name: '', email: '', service: REQUEST_DEFAULTS.service, consent: false },
+    validateWaitlist,
+  );
   const [status, setStatus] = useState<Status>({ state: 'idle' });
   const shell = useShell(status);
-
-  const set =
-    <K extends keyof WaitlistFields>(k: K, max?: number) =>
-    (value: WaitlistFields[K]) => {
-      const next = typeof value === 'string' && max ? (value.slice(0, max) as WaitlistFields[K]) : value;
-      setFields((f) => {
-        const updated = { ...f, [k]: next };
-        if (attempted) setErrors(validateWaitlist(updated));
-        return updated;
-      });
-    };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status.state === 'submitting') return;
 
-    setAttempted(true);
-    const found = validateWaitlist(fields);
-    setErrors(found);
-    const firstBad = (['email', 'consent'] as const).find((k) => found[k]);
+    const firstBad = check();
     if (firstBad) {
       document.getElementById(`wl-${firstBad}`)?.focus();
       return;
